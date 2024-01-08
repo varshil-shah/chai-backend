@@ -4,7 +4,10 @@ import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
@@ -77,6 +80,63 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   //TODO: update video details like title, description, thumbnail
+  const { title, description } = req.body;
+  const thumbnail = req.file?.path;
+
+  // check if videoId is present
+  if (!videoId) {
+    throw new ApiError(400, "Video Id is required");
+  }
+
+  // check if videoId is valid
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid Video Id");
+  }
+
+  // check if video exists
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "No video found with this Id");
+  }
+
+  // check if user is owner of video
+  if (video.owner.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You are not allowed to update this video");
+  }
+
+  const updateVideo = {
+    title: title || video.title,
+    description: description || video.description,
+  };
+
+  // check if new thumbnail is present
+  if (thumbnail) {
+    // upload new thumbnail on cloudinary
+    const newThumbnail = await uploadOnCloudinary(thumbnail);
+    if (!newThumbnail) {
+      throw new ApiError(500, "Error while uploading thumbnail");
+    }
+
+    if (newThumbnail) {
+      // delete old thumbnail from cloudinary
+      const fileToDelete = video.thumbnail.split(".").at(2).split("/").at(-1);
+      console.log(fileToDelete);
+      await deleteFromCloudinary(fileToDelete);
+    }
+
+    // update thumbnail url
+    updateVideo.thumbnail = newThumbnail.url;
+  }
+
+  // update video
+  const updatedVideo = await Video.findByIdAndUpdate(videoId, updateVideo, {
+    new: true,
+  });
+
+  // return response
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {

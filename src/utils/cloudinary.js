@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import { error } from "console";
 import fs from "fs";
 
 cloudinary.config({
@@ -24,4 +25,17 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadOnCloudinary };
+const deleteFromCloudinary = async (fileName) => {
+  try {
+    if (!fileName) return null;
+    //delete the file on cloudinary
+    const response = await cloudinary.uploader.destroy(fileName);
+
+    // file has been deleted successfull
+    return response;
+  } catch (error) {
+    return null;
+  }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary };
