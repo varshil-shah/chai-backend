@@ -79,7 +79,6 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: update video details like title, description, thumbnail
   const { title, description } = req.body;
   const thumbnail = req.file?.path;
 
@@ -183,6 +182,39 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+
+  // check if videoId is present
+  if (!videoId) {
+    throw new ApiError(400, "Please provide video Id!");
+  }
+
+  // check if videoId is valid
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid video Id!");
+  }
+
+  // check if video exists
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "No video found with this Id!");
+  }
+
+  // check if user is owner of video
+  if (video.owner.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You are not allowed to update this video!");
+  }
+
+  // update video
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    { isPublished: !video.isPublished },
+    {
+      new: true,
+    }
+  );
+
+  // return response
+  return res.status(200).json(new ApiResponse(200, updatedVideo));
 });
 
 export {
