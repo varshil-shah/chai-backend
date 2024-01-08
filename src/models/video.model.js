@@ -44,4 +44,10 @@ const videoSchema = new Schema(
 
 videoSchema.plugin(mongooseAggregatePaginate);
 
+// filter out unpublished videos
+videoSchema.pre("find", function (next) {
+  this.find({ isPublished: { $ne: false } });
+  next();
+});
+
 export const Video = mongoose.model("Video", videoSchema);
