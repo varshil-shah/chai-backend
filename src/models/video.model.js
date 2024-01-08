@@ -46,7 +46,16 @@ videoSchema.plugin(mongooseAggregatePaginate);
 
 // filter out unpublished videos
 videoSchema.pre("find", function (next) {
-  this.find({ isPublished: { $ne: true } });
+  this.find({ isPublished: true });
+  next();
+});
+
+// populate the owner field
+videoSchema.pre("find", function (next) {
+  this.populate({
+    path: "owner",
+    select: "-password -__v -createdAt -updatedAt -refreshToken",
+  });
   next();
 });
 
