@@ -121,7 +121,7 @@ const updateVideo = asyncHandler(async (req, res) => {
       // delete old thumbnail from cloudinary
       const fileToDelete = video.thumbnail.split(".").at(2).split("/").at(-1);
       console.log(fileToDelete);
-      await deleteFromCloudinary(fileToDelete);
+      await deleteFromCloudinary(fileToDelete, "image");
     }
 
     // update thumbnail url
@@ -166,13 +166,13 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
   // delete video and thumbnail from cloudinary
   const fileToDelete = video.videoFile.split(".").at(2).split("/").at(-1);
-  await deleteFromCloudinary(fileToDelete);
-
   const thumbnailToDelete = video.thumbnail.split(".").at(2).split("/").at(-1);
-  await deleteFromCloudinary(thumbnailToDelete);
 
-  // delete video from db
-  await Video.findByIdAndDelete(videoId);
+  await Promise.all([
+    deleteFromCloudinary(fileToDelete, "video"),
+    deleteFromCloudinary(thumbnailToDelete, "image"),
+    Video.findByIdAndDelete(videoId),
+  ]);
 
   // return response
   return res.status(204).json({
