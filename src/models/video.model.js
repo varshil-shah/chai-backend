@@ -46,7 +46,7 @@ videoSchema.plugin(mongooseAggregatePaginate);
 
 // filter out unpublished videos
 videoSchema.pre("find", function (next) {
-  this.find({ isPublished: { $ne: false } });
+  this.find({ isPublished: { $ne: true } });
   next();
 });
 

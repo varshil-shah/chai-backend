@@ -11,7 +11,56 @@ import {
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-  //TODO: get all videos based on query, sort, pagination
+  const sort = sortType === "des" ? -1 : 1;
+  const sortOptions = {
+    [sortBy]: sort,
+  };
+
+  // get all videos
+  const videos = await Video.aggregate([
+    {
+      $match: {
+        $and: [
+          { isPublished: { $ne: false } },
+          { title: { $regex: query || "", $options: "i" } },
+          {
+            owner: userId ? new mongoose.Types.ObjectId(userId) : { $ne: null },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    {
+      $unwind: "$owner",
+    },
+    {
+      $project: {
+        "owner.password": 0,
+        "owner.createdAt": 0,
+        "owner.updatedAt": 0,
+        "owner.__v": 0,
+      },
+    },
+    {
+      $sort: sortOptions,
+    },
+    {
+      $skip: (page - 1) * limit,
+    },
+    {
+      $limit: limit,
+    },
+  ]);
+
+  // send response
+  return res.status(200).json(new ApiResponse(200, videos));
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
